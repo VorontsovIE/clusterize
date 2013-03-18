@@ -72,13 +72,14 @@ end
 
 # Looks for a cutoff that yields maximal number of annotated clusters (consisting of both known and denovo motif).
 # Returns least possible cutoff (prefer more compact clusters)
-def best_cutoff(clusterer, criterium, &block)
+def best_cutoff(clusterer, criterium, prefer_compact_clusters, &block)
   statistics = calculate_statistics_by_possible_cutoffs(clusterer, criterium, &block)
   max_num_annotated_clusters = statistics.map{|cutoff, num_clusters, num_annotated_clusters| num_annotated_clusters }.max
-  
-  statistics.reverse.find{|cutoff, num_clusters, num_annotated_clusters| num_annotated_clusters == max_num_annotated_clusters }.tap do |x|
-    puts "best #{criterium} cutoff: #{x[0]} -- num clusters: #{x[1]} -- num annotated_clusters: #{x[2]}"
-  end.first
+  if prefer_compact_clusters
+    statistics.reverse.find{|cutoff, num_clusters, num_annotated_clusters| num_annotated_clusters == max_num_annotated_clusters }.first
+  else
+    statistics.reverse.find{|cutoff, num_clusters, num_annotated_clusters| num_annotated_clusters == max_num_annotated_clusters }.first
+  end
 end
 
 options = { }
@@ -142,43 +143,47 @@ end
 #File.open("#{output_folder}/macroape_linklength_w_xml.html",'w'){|f| f << xml_formatter.create_html_connected_to_xml("#{output_folder}/macroape_linklength.xml") }
 
 
-distance_macroape_cutoff_grid = [] # (0.90...1).step(0.01).to_a
-distance_macroape_cutoff_maxdist_grid = [0.9746]
-distance_macroape_cutoff_linklength_grid = [0.9586, 0.744384589, 
-0.667869685]
 
-[:link_length, :subtree_max_distance].each do |criterium|
-  clusterer.statistics_by_swissregulon_possible_cutoffs(criterium).tap{|results|
-    File.write "statistics_by_swissregulon(#{criterium}).txt", results.map{|res| res.join("\t") }.join("\n")
-  }
-end
+# threshold found with criterium that most(just before first and second gluing-events ) swissregulons hadn't glued in clusters:
+# link_length 0.744384589  497     182     8       1.043956044     2 - just before a point where more than 2 swissregulons becomes glued in one cluster
+# link_length 0.667869685  616     189     1       1.005291005     2 - just before point where second cluster with two swissregulons appears.
+# distance_macroape_cutoff_linklength_grid = [0.744384589, 0.667869685]
+# This results are obtained by manual processing of results of following code:
+#
+# [:link_length, :subtree_max_distance].each do |criterium|
+#   clusterer.statistics_by_swissregulon_possible_cutoffs(criterium).tap{|results|
+#     File.write "statistics_by_swissregulon(#{criterium}).txt", results.map{|res| res.join("\t") }.join("\n")
+#   }
+# end
+#
+
+#
+# Cutoffs choosen by criterium that maximal number of clusters (on whole set known+lexicon+denovo) are annotated
+# if several cutoffs exist, one chooses cutoff corresponding to most compactified clusters:
+# subtree_max_distance  -->  distance_macroape_cutoff_grid= [0.9746]
+# link_length  -->  distance_macroape_cutoff_grid = [0.9586]
+#
 
 annotated = ->(cluster){ cluster.any?{|motif| motif =~ /^KNOWN/} && cluster.any?{|motif| motif =~ /^DENOVO/ } }
-#File.open('linklength_cutoff_chose.txt','w'){|f| 
-#  f.puts "Cutoff\tClusters\tAnnotated"
-#  calculate_statistics_by_possible_cutoffs(clusterer, :link_length, &annotated).each{|cutoff, num_clusters, num_annotated|
-#    f.puts "#{cutoff}\t#{num_clusters}\t#{num_annotated}"
-#  }
-#}
-#distance_macroape_cutoff_maxdist_grid << best_cutoff(clusterer, :subtree_max_distance, &annotated)
-#distance_macroape_cutoff_linklength_grid << best_cutoff(clusterer, :link_length, &annotated)
 
-clusters_macroape_linklength, clusters_macroape_maxdist = {}, {}
-distance_macroape_cutoff_linklength_grid.each { |cutoff|
-  clusters_macroape_linklength[cutoff] = clusterer.get_clusters_names(&clusterer.cutoff_criterium(:link_length, cutoff))
-}
-distance_macroape_cutoff_maxdist_grid.each { |cutoff|
-  clusters_macroape_maxdist[cutoff] = clusterer.get_clusters_names(&clusterer.cutoff_criterium(:subtree_max_distance, cutoff))
-}
+['subtree_max_distance', 'link_length'].each do |criterium|
+  distance_macroape_cutoff_grid = []
+  clusters_macroape = {}
 
-clusters_macroape_linklength.each do |cutoff, clusters|
-  File.open("#{output_folder}/macroape_linklength_cluster_names (#{cutoff.round(4)} - #{clusters.size}).txt",'w'){|f|
-    clusters.each{|clust| f.puts clust.join("\t") }
-  }    
-end
+  # cutoffs for most-compact clusters among clusters with maximal number of annotated ones
+  distance_macroape_cutoff_grid << best_cutoff(clusterer, criterium, true, &annotated)
+  # cutoffs for least-compact clusters among clusters with maximal number of annotated ones
+  distance_macroape_cutoff_grid << best_cutoff(clusterer, criterium, false, &annotated)
 
-clusters_macroape_maxdist.each do |cutoff, clusters|
-  File.open("#{output_folder}/macroape_maxdist_cluster_names (#{cutoff.round(4)} - #{clusters.size}).txt",'w'){|f| 
-    clusters.each{|clust| f.puts clust.join("\t")}
-  }
+  distance_macroape_cutoff_grid.each do |cutoff|
+    cutoff_criterium = clusterer.cutoff_criterium(criterium, cutoff)
+    clusters_macroape[cutoff] = clusterer.get_clusters_names(&cutoff_criterium)
+  end
+
+  clusters_macroape.each do |cutoff, clusters|
+    filename = "macroape_#{criterium}_cluster_names (#{cutoff.round(4)} - #{clusters.size}).txt"
+    File.open("#{output_folder}/#{filename}",'w'){|f|
+      clusters.each{|clust| f.puts clust.join("\t") }
+    }
+  end
 end
