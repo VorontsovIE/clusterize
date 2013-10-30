@@ -8,5 +8,7 @@ class ClusterFormatter
     mtch = /(?<rep>.+).+?\+\k<rep>/.match(name)
     mtch ? name.gsub(/\+#{mtch[:rep]}/,'+') : name
   end
-  
+  def self.copy_js_libs(dst)
+    FileUtils.cp_r(File.absolute_path('../../templates/js', __FILE__), dst)
+  end
 end

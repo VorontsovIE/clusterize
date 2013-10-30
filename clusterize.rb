@@ -104,6 +104,7 @@ raise "names file #{names_filename} not exist"  unless File.exist?(names_filenam
 raise 'output folder not specified'  unless output_folder
 
 FileUtils.mkdir_p(output_folder)  unless Dir.exist? output_folder
+FileUtils.mkdir_p(File.join(output_folder,'html'))  unless Dir.exist? File.join(output_folder,'html')
 FileUtils.mkdir_p(File.dirname(cluster_dump_filename))  if cluster_dump_filename && ! Dir.exist?(File.dirname(cluster_dump_filename))
 
 
@@ -129,14 +130,13 @@ else
   clusterer.make_linkage
 end
 
-#newick_formatter = ClusterNewickFormatter.new(clusterer, :link_length)
-#xml_formatter = ClusterXMLFormatter.new(clusterer, :link_length, 0.1)
-#File.open("#{output_folder}/macroape_linklength.html",'w'){|f| f << newick_formatter.create_newick_html()}
-#File.open("#{output_folder}/macroape_linklength.newick",'w'){|f| f << newick_formatter.content()}
-
-#File.open("#{output_folder}/macroape_linklength.xml",'w'){|f| f << xml_formatter.content()}
-#File.open("#{output_folder}/macroape_linklength_w_xml.html",'w'){|f| f << xml_formatter.create_html_connected_to_xml("#{output_folder}/macroape_linklength.xml") }
-
+newick_formatter = ClusterNewickFormatter.new(clusterer, :link_length)
+xml_formatter = ClusterXMLFormatter.new(clusterer, :link_length, 0.1)
+File.open("#{output_folder}/html/macroape_linklength.html",'w'){|f| f << newick_formatter.create_newick_html()}
+File.open("#{output_folder}/html/macroape_linklength.newick",'w'){|f| f << newick_formatter.content()}
+File.open("#{output_folder}/html/macroape_linklength.xml",'w'){|f| f << xml_formatter.content()}
+#File.open("#{output_folder}/html/macroape_linklength_w_xml.html",'w'){|f| f << xml_formatter.create_html_connected_to_xml("#{output_folder}/macroape_linklength.xml") }
+ClusterFormatter.copy_js_libs("#{output_folder}/html/")
 
 
 # threshold found with criterium that most(just before first and second gluing-events ) swissregulons hadn't glued in clusters:

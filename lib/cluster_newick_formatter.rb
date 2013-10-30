@@ -20,7 +20,6 @@ class ClusterNewickFormatter < ClusterFormatter
             'svgCanvas', 
             #{size_x}, #{size_y},
             'circular'
-            }
           );
       };
       </script>
