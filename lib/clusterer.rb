@@ -11,11 +11,11 @@ class Array
 end
 
 def load_matrix_from_file(matrix_filename)
-  File.readlines(matrix_filename).map{|line| line.strip.split.map(&:to_f) }
+  File.readlines(matrix_filename).map{|line| line.rstrip.split.map(&:to_f) }
 end
 
 def load_matrix_from_file_with_names(matrix_filename)
-  File.readlines(matrix_filename)[1..-1].map{|line| line.strip.split[1..-1].map(&:to_f) }
+  File.readlines(matrix_filename)[1..-1].map{|line| line.rstrip.split[1..-1].map(&:to_f) }
 end
 
 # Usage:

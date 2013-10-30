@@ -109,7 +109,7 @@ FileUtils.mkdir_p(File.dirname(cluster_dump_filename))  if cluster_dump_filename
 
 if options[:with_names]
   distance_matrix = load_matrix_from_file_with_names(matrix_filename)
-  names = File.open(matrix_filename){|f|f.readline}.strip.split[1..-1]
+  names = File.open(matrix_filename){|f|f.readline}.rstrip.split(/\s/)[1..-1]
 else
   distance_matrix = load_matrix_from_file(matrix_filename)
   names = YAML.load_file(names_filename)
