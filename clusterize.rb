@@ -1,5 +1,5 @@
-# ruby ../../iogen_tools/clustering/clusterize.rb --with-names 
-# distance_matrix/distance_matrix_with_names.txt motifs_names.yaml 
+# ruby ../../iogen_tools/clustering/clusterize.rb --with-names
+# distance_matrix/distance_matrix_with_names.txt motifs_names.yaml
 # distance_matrix/clustering_results cluster.yaml
 #
 # ruby clusterize.rb [--with-names] [--log log_file.log] <matrix-txt-file> <motif-names-yaml-file> <output-folder> [cluster-yaml-dump]
@@ -17,7 +17,7 @@ class Clusterer
     (0..root_node).map{|ind| send(criterium,ind)}.uniq.sort
   end
 
-  #  yields cutoff and array of clusters(names of motifs in cluster) 
+  #  yields cutoff and array of clusters(names of motifs in cluster)
   #  at each possible cutoff
   def clusters_by_cutoff(criterium)
     raise 'Clusterer#statistics_by_cutoffs needs a block'  unless block_given?
@@ -71,19 +71,17 @@ def calculate_statistics_by_possible_cutoffs(clusterer, criterium, &block)
 end
 
 # Looks for a cutoff that yields maximal number of annotated clusters (consisting of both known and denovo motif).
-# Returns least possible cutoff (prefer more compact clusters)
-def best_cutoff(clusterer, criterium, prefer_compact_clusters, &block)
+# Returns range from least and highest possible cutoff (prefer more broad or compact clusters)
+def best_cutoff(clusterer, criterium, &block)
   statistics = calculate_statistics_by_possible_cutoffs(clusterer, criterium, &block)
   max_num_annotated_clusters = statistics.map{|cutoff, num_clusters, num_annotated_clusters| num_annotated_clusters }.max
-  if prefer_compact_clusters
-    statistics.reverse.find{|cutoff, num_clusters, num_annotated_clusters| num_annotated_clusters == max_num_annotated_clusters }.first
-  else
-    statistics.reverse.find{|cutoff, num_clusters, num_annotated_clusters| num_annotated_clusters == max_num_annotated_clusters }.first
-  end
+  best_cutoffs_infos = statistics.select{|cutoff, num_clusters, num_annotated_clusters| num_annotated_clusters == max_num_annotated_clusters }
+  best_cutoffs_infos.first.first .. best_cutoffs_infos.last.first
 end
 
 options = { }
 OptionParser.new{|cmd|
+  cmd.banner = 'Usage: ruby clusterize.rb --with-names <distance_matrix/distance_matrix_with_names.txt>  <motifs_names.yaml>  <distance_matrix/clustering_results>  <distance_matrix/cluster.yaml>'
   cmd.on('-l', '--log LOG_FILE', 'log-file of clusterization process (by default stderr used)'){ |log_file|
     options[:log_file] = log_file
   }
@@ -115,11 +113,6 @@ else
   names = YAML.load_file(names_filename)
 end
 
-#p distance_matrix.size
-#p distance_matrix.map(&:size)
-#p distance_matrix.first[0,150]
-#p distance_matrix[1][0,150]
-
 if cluster_dump_filename
   if File.exist?(cluster_dump_filename)
     clusterer = Clusterer.load(distance_matrix, cluster_dump_filename)
@@ -150,12 +143,12 @@ end
 # distance_macroape_cutoff_linklength_grid = [0.744384589, 0.667869685]
 # This results are obtained by manual processing of results of following code:
 #
-# [:link_length, :subtree_max_distance].each do |criterium|
-#   clusterer.statistics_by_swissregulon_possible_cutoffs(criterium).tap{|results|
-#     File.write "statistics_by_swissregulon(#{criterium}).txt", results.map{|res| res.join("\t") }.join("\n")
-#   }
-# end
-#
+[:link_length, :subtree_max_distance].each do |criterium|
+  clusterer.statistics_by_swissregulon_possible_cutoffs(criterium).tap{|results|
+    File.write "statistics_by_swissregulon(#{criterium}).txt", results.map{|res| res.join("\t") }.join("\n")
+  }
+end
+
 
 #
 # Cutoffs choosen by criterium that maximal number of clusters (on whole set known+lexicon+denovo) are annotated
@@ -163,19 +156,28 @@ end
 # subtree_max_distance  -->  distance_macroape_cutoff_grid= [0.9746]
 # link_length  -->  distance_macroape_cutoff_grid = [0.9586]
 #
+# Recalc gave us:
+# subtree_max_distance --> 0.9995135346164128..0.9995430451218578
+# link_length --> 0.9452718093750845..0.9586281289091381
+#
 
 annotated = ->(cluster){ cluster.any?{|motif| motif =~ /^KNOWN/} && cluster.any?{|motif| motif =~ /^DENOVO/ } }
 
-['subtree_max_distance', 'link_length'].each do |criterium|
-  distance_macroape_cutoff_grid = []
+distance_macroape_cutoff_grid = { subtree_max_distance: [], link_length: [] }
+
+distance_macroape_cutoff_grid = { subtree_max_distance: [0.9995135346164128, 0.9995430451218578],
+				link_length: [0.9452718093750845,0.9586281289091381] }
+
+[:subtree_max_distance, :link_length].each do |criterium|
   clusters_macroape = {}
+#  cutoffs = best_cutoff(clusterer, criterium, &annotated)
+#  puts "criterium: #{criterium} -- #{cutoffs}"
+#   cutoffs for most-compact clusters among clusters with maximal number of annotated ones
+#  distance_macroape_cutoff_grid[criterium] << cutoffs.end
+#   cutoffs for least-compact clusters among clusters with maximal number of annotated ones
+#  distance_macroape_cutoff_grid[criterium] << cutoffs.begin
 
-  # cutoffs for most-compact clusters among clusters with maximal number of annotated ones
-  distance_macroape_cutoff_grid << best_cutoff(clusterer, criterium, true, &annotated)
-  # cutoffs for least-compact clusters among clusters with maximal number of annotated ones
-  distance_macroape_cutoff_grid << best_cutoff(clusterer, criterium, false, &annotated)
-
-  distance_macroape_cutoff_grid.each do |cutoff|
+  distance_macroape_cutoff_grid[criterium].each do |cutoff|
     cutoff_criterium = clusterer.cutoff_criterium(criterium, cutoff)
     clusters_macroape[cutoff] = clusterer.get_clusters_names(&cutoff_criterium)
   end
