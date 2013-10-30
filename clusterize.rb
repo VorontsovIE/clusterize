@@ -1,3 +1,5 @@
+# TODO: names_filename shouldn't be obligatory in case when distance matrix has filenames!
+
 # ruby ../../iogen_tools/clustering/clusterize.rb --with-names
 # distance_matrix/distance_matrix_with_names.txt motifs_names.yaml
 # distance_matrix/clustering_results cluster.yaml
