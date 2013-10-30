@@ -105,7 +105,7 @@ class Clusterer
   end
 
   def num_items
-    @size #leafs_distance.size
+    @size ||= leafs_distance.size
   end
 
   def root_node
