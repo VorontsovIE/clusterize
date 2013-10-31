@@ -8,8 +8,8 @@ class ClusterXMLFormatter < ClusterFormatter
   end
 
   def create_html_connected_to_xml(xml_file, size={})
-    size_x = size[:x] || 2000
-    size_y = size[:y] || 2000
+    size_x = size[:x] || 500
+    size_y = size[:y] || 500
   
     <<-RESULT
     <html>

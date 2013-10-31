@@ -3,8 +3,8 @@ require_relative 'cluster_formatter'
 class ClusterNewickFormatter < ClusterFormatter
   def create_newick_html(size={})
     newick_inner_content = content()
-    size_x = size[:x] || 2000
-    size_y = size[:y] || 2000
+    size_x = size[:x] || 500
+    size_y = size[:y] || 500
     
     <<-RESULT
     <html>
