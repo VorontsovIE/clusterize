@@ -1,8 +1,4 @@
-# TODO: names_filename shouldn't be obligatory in case when distance matrix has filenames!
-
-# ruby ../../iogen_tools/clustering/clusterize.rb --with-names
-# distance_matrix/distance_matrix_with_names.txt motifs_names.yaml
-# distance_matrix/clustering_results cluster.yaml
+# ruby clusterize.rb distance_matrix/distance_matrix_with_names.txt  distance_matrix/clustering_results  cluster.yaml
 #
 # ruby clusterize.rb [--with-names] [--log log_file.log] <matrix-txt-file> <motif-names-yaml-file> <output-folder> [cluster-yaml-dump]
 # cluster yaml dump used in a pair of ways:
@@ -87,20 +83,18 @@ OptionParser.new{|cmd|
   cmd.on('-l', '--log LOG_FILE', 'log-file of clusterization process (by default stderr used)'){ |log_file|
     options[:log_file] = log_file
   }
-  cmd.on('-w','--with-names','load matrix from distance matrix with names'){
-    options[:with_names] = true
+  cmd.on('-n','--names FILENAME','load names from separate file (not from distance matrix first row/column)'){ |names_filename|
+    options[:names_file] = names_filename  # distance_matrix/motifs_order.yaml
+    raise "names file #{names_filename} not exist"  unless File.exist?(names_filename)
   }
 }.parse!
 
 matrix_filename = ARGV.shift        # distance_matrix/distance_macroape.txt
-names_filename = ARGV.shift         # distance_matrix/motifs_order.yaml
 output_folder = ARGV.shift          # distance_matrix/clustering_results
 cluster_dump_filename = ARGV.shift  # distance_matrix/cluster.yaml
 
 raise 'matrix filename not specified'  unless matrix_filename
 raise "matrix file #{matrix_filename} not exist"  unless File.exist?(matrix_filename)
-raise 'names filename not specified'  unless names_filename
-raise "names file #{names_filename} not exist"  unless File.exist?(names_filename)
 raise 'output folder not specified'  unless output_folder
 
 FileUtils.mkdir_p(output_folder)  unless Dir.exist? output_folder
@@ -108,12 +102,12 @@ FileUtils.mkdir_p(File.join(output_folder,'html'))  unless Dir.exist? File.join(
 FileUtils.mkdir_p(File.dirname(cluster_dump_filename))  if cluster_dump_filename && ! Dir.exist?(File.dirname(cluster_dump_filename))
 
 
-if options[:with_names]
+if options[:names_file]
+  distance_matrix = load_matrix_from_file(matrix_filename)
+  names = YAML.load_file(options[:names_file])
+else
   distance_matrix = load_matrix_from_file_with_names(matrix_filename)
   names = File.open(matrix_filename){|f|f.readline}.rstrip.split(/\s/)[1..-1]
-else
-  distance_matrix = load_matrix_from_file(matrix_filename)
-  names = YAML.load_file(names_filename)
 end
 
 if cluster_dump_filename
